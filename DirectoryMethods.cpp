@@ -9,7 +9,7 @@
  stack<string> forw_stack; //opposite of back_stack.
  int totalFiles;
  vector<char> command_string; //to store char by char info in command mode.
-
+char homepath[4096];
  unsigned int term_row_num; //number of row in terminal.
  unsigned int term_col_num; //number of col in terminal.
   unsigned int posx; //curser position x.
@@ -37,6 +37,27 @@ int FilesToPrint()
     }
     return lenRecord;
 }
+
+//checking if the path denotes a directory or not
+bool isDirectory(const char*path){
+   
+
+    struct stat Stat;
+     stat(path, &Stat);
+
+     return ((Stat.st_mode & S_IFMT) == S_IFDIR)?true:false;
+}
+//checking if the path denotes a directory or not
+bool isRegularFile(const char*path){
+   
+
+    struct stat Stat;
+     stat(path, &Stat);
+
+     return ((Stat.st_mode & S_IFMT) == S_IFREG)?true:false;
+}
+
+   
 
 void enableRawMode(){
     //getting the initial terminal settings
@@ -158,11 +179,11 @@ void enableRawMode(){
                 // printf("%c[%d;%dH", 27, posx, posy);
                 //if forward stack contains someting then we should go to top directory
                 if(!forw_stack.empty()){
-
+                    back_stack.push(cur_directory);
                     string gotoD=forw_stack.top();
                      strcpy(cur_directory,gotoD.c_str());
                     forw_stack.pop();
-                    back_stack.push(gotoD);
+                    
                     directory_Listing(cur_directory);
                      // printf("%c[%d;%dH", 27, posx, posy);
                 }
@@ -176,28 +197,77 @@ void enableRawMode(){
                     string gotoD=back_stack.top();
                      
                     back_stack.pop();
-                    forw_stack.push(gotoD);
-                    gotoD=back_stack.top();
+                    forw_stack.push(string(cur_directory));
                     strcpy(cur_directory,gotoD.c_str());
                     directory_Listing(cur_directory);
-                    
-                }else if(s==1){
-
-                    string gotoD=back_stack.top();
-                    strcpy(cur_directory,gotoD.c_str());
-                    directory_Listing(cur_directory);
-
-
-                }
+                 
+                 }
             }
             else if (inputKey[0] == 'H' || inputKey[0] == 'h'){
-                cout<< "HomeKey"<<endl;
+                back_stack.push(cur_directory);
+                forw_stack.push(homepath);
+                directory_Listing(homepath);
             }
             else if (inputKey[0] == 127){
-                cout<<" BackspaceKey"<<endl;
+                string s=string(cur_directory);
+                int posoflastslash=0;
+                for(int i=0;i<s.length();i++){
+                    if(s[i]=='/'){
+                        posoflastslash=i;
+                    }
+                }
+
+                string parent=s.substr(0,posoflastslash);
+                cout<<" B " << posoflastslash<<"   "<< parent;
+                back_stack.push(cur_directory);
+                forw_stack.push(parent);
+                strcpy(cur_directory,parent.c_str());
+                directory_Listing(cur_directory);
+
+                
             }
             else if (inputKey[0] == 10){
-                cout<< "EnterKey"<<endl;
+                string parent = "..";
+                string current = ".";
+                string myDir=directoryList[cur_window + posx - 1];
+                if(myDir == current){
+                    continue;
+                }else if(myDir == parent){
+
+                }else{
+                    //get the full path 
+                  string fullP=string(cur_directory)+"/"+myDir;
+                char *fpath = new char[fullP.length() + 1];
+                strcpy(fpath , fullP.c_str());
+
+                if (isDirectory(fpath)) {
+                    back_stack.push(string(cur_directory));
+                    strcpy(cur_directory, fpath);
+                    // back_stack.push(string(cur_directory));
+                    while (!forw_stack.empty())
+                     forw_stack.pop();
+                      forw_stack.push(string(cur_directory));
+
+                     printf("%c[%d;%dH", 27, 1, 1);
+                     directory_Listing(cur_directory);
+                    
+                }else if(isRegularFile(fpath)){
+                    printf("%c[%d;%dH", 27, lastPos ,1);
+                    cout<<"file";
+
+                    pid_t pid = fork();
+                    if (pid == 0) {
+                        close(2);
+                        // char *const pat=fpath;
+                         // execv("vi",fpath);
+                        execlp("xdg-open", "xdg-open", fpath, NULL);
+                        exit(0);
+                    }
+                          
+                }
+
+                }
+                
             }
             else if (inputKey[0] == ':') {
                 // int ret = command_mode();
@@ -376,10 +446,12 @@ int main(int argc, char* argv[])
     if (g_argc == 1)
     {
         string str = ".";
+
         strcpy(root, str.c_str());  
          strcat(cur_directory, root);
+        strcpy(homepath,root);
         back_stack.push(root);
-        back_stack.push("/home"); //back_stack saves history of visited dir.      
+         //back_stack saves history of visited dir.      
         directory_Listing(root);
 
         
@@ -388,7 +460,9 @@ int main(int argc, char* argv[])
     else if (argc == 2)
     {
         strcpy(root, g_argv[1]);
+        strcpy(homepath,root);
         strcat(cur_directory, root);
+        
         back_stack.push(root);
         directory_Listing(root);
         

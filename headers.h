@@ -29,6 +29,7 @@ extern stack<string> back_stack; //to store previously visited dir.
 extern stack<string> forw_stack; //opposite of back_stack.
 extern int totalFiles;
 extern vector<char> command_string; //to store char by char info in command mode.
+extern char homepath[4096];
 extern unsigned int cx; //curser position x.
 extern unsigned int cy; //curser position y.
 extern unsigned int term_row_num; //number of row in terminal.
