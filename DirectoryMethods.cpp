@@ -63,28 +63,54 @@ void enableRawMode(){
             cout << "-----NORMAL MODE-----";
             
             printf("%c[%d;%dH", 27, posx, posy);
+            // printf("%c[%d;%dH", 27, 1, 80);
+            unsigned int x=posx + cur_window ;
             fflush(0);
             if (read(STDIN_FILENO, inputKey, 3) == 0)
                 //0 bytes are read
                 continue;
-            else if (inputKey[0] == 27 && inputKey[1] == '[' && inputKey[2] == 'A'){
+            else if (inputKey[2] == 'A'){
                   
+
+                        // if (posx > 1) {
+                        //     posx--;
+                        //     MOVE_CURSER;
+                        // }
+                        // else if (posx == 1 && posx + cur_window > 1) {
+                        //    if (cur_window > 0)
+                        //     {
+                        //         cur_window--;
+                        //     }
+                        //     //listing the files window
+                        //      printf("%c[2J", 27);
+                        //     for (unsigned int i = cur_window; i <= term_row_num + cur_window - 1; i++)
+                        //     {
+                        //         string fName=directoryList[i];
+                        //         display(fName.c_str());
+                        //     }
+                        //     MOVE_CURSER;
+                        // }
                   if (posx + cur_window > 1)
                     {
                         posx--;
-                        if (posx > 0)
+                        if (posx >= 1)
                         {
+
                             printf("%c[%d;%dH", 27, posx, posy);
+
                         }
-                        else if (posx <= 0 && posx + cur_window >= 1)
+                        
+                        else if ( x>= 1 && posx <= 0 )
                         {
-                           printf("%c[2J", 27);
+                             printf("%c[2J", 27);
                             if (cur_window > 0)
                             {
                                 cur_window--;
                             }
                            
                             printf("%c[%d;%dH", 27, 1, 1);
+
+                            unsigned int i;
                             for (unsigned int i = cur_window; i <= term_row_num + cur_window - 1; i++)
                             {
                                 string fName=directoryList[i];
@@ -97,16 +123,16 @@ void enableRawMode(){
                     
 
             }
-            else if (inputKey[0] == 27 && inputKey[1] == '[' && inputKey[2] == 'B'){
+            else if (inputKey[2] == 'B'){
                int lenRecord;
-                    if (posx + cur_window < (totalFiles))
+                    if (x < (totalFiles))
                     {
                         posx++;
                         if (posx <= term_row_num)
                         {
                             printf("%c[%d;%dH", 27, posx, posy);
                         }
-                        else if (posx > term_row_num && posx + cur_window <= totalFiles)
+                        else if (posx > term_row_num && x <= totalFiles)
                         {
                             printf("%c[2J", 27);
                             lenRecord = FilesToPrint() - 1;
@@ -114,9 +140,10 @@ void enableRawMode(){
                             {
                                 cur_window++;
                             }
-                            //cout<<"cur_window : "<<cur_window<<"***********";
+                            
                              printf("%c[%d;%dH", 27, 1, 1);
-                            for (int i = cur_window; i <= lenRecord + cur_window; i++)
+                             unsigned int i;
+                            for (i = cur_window; i <= lenRecord + cur_window; i++)
                             {
                                 string fName=directoryList[i];
                                 display(fName.c_str());
@@ -126,11 +153,42 @@ void enableRawMode(){
                          printf("%c[%d;%dH", 27, posx, posy);
                     }
             }
-            else if (inputKey[0] == 27 && inputKey[1] == '[' && inputKey[2] == 'C'){
-                cout<< "RightArrow"<<endl;
+            else if ( inputKey[2] == 'C'){
+
+                // printf("%c[%d;%dH", 27, posx, posy);
+                //if forward stack contains someting then we should go to top directory
+                if(!forw_stack.empty()){
+
+                    string gotoD=forw_stack.top();
+                     strcpy(cur_directory,gotoD.c_str());
+                    forw_stack.pop();
+                    back_stack.push(gotoD);
+                    directory_Listing(cur_directory);
+                     // printf("%c[%d;%dH", 27, posx, posy);
+                }
             }
-            else if (inputKey[0] == 27 && inputKey[1] == '[' && inputKey[2] == 'D'){
-                cout<< "LeftArrow"<<endl;
+            else if (inputKey[2] == 'D'){
+               //if forward stack contains someting then we should go to top directory
+                // printf("%c[%d;%dH", 27, 1, 80);
+                int s=back_stack.size() ;
+                if(s>=2 ){
+
+                    string gotoD=back_stack.top();
+                     
+                    back_stack.pop();
+                    forw_stack.push(gotoD);
+                    gotoD=back_stack.top();
+                    strcpy(cur_directory,gotoD.c_str());
+                    directory_Listing(cur_directory);
+                    
+                }else if(s==1){
+
+                    string gotoD=back_stack.top();
+                    strcpy(cur_directory,gotoD.c_str());
+                    directory_Listing(cur_directory);
+
+
+                }
             }
             else if (inputKey[0] == 'H' || inputKey[0] == 'h'){
                 cout<< "HomeKey"<<endl;
@@ -203,6 +261,7 @@ int directory_Listing(const char* path){
     cout<<"\033c";
     cout<<"\u001b[33m";
     update_list();
+    posy=80;
     closedir(pwDir);
     return 0;
 
@@ -319,7 +378,8 @@ int main(int argc, char* argv[])
         string str = ".";
         strcpy(root, str.c_str());  
          strcat(cur_directory, root);
-        back_stack.push(root); //back_stack saves history of visited dir.      
+        back_stack.push(root);
+        back_stack.push("/home"); //back_stack saves history of visited dir.      
         directory_Listing(root);
 
         
