@@ -208,6 +208,7 @@ void enableRawMode(){
                 forw_stack.push(homepath);
                 directory_Listing(homepath);
             }
+            //backspace key
             else if (inputKey[0] == 127){
                 string s=string(cur_directory);
                 int posoflastslash=0;
@@ -218,7 +219,7 @@ void enableRawMode(){
                 }
 
                 string parent=s.substr(0,posoflastslash);
-                cout<<" B " << posoflastslash<<"   "<< parent;
+                
                 back_stack.push(cur_directory);
                 forw_stack.push(parent);
                 strcpy(cur_directory,parent.c_str());
@@ -233,7 +234,20 @@ void enableRawMode(){
                 if(myDir == current){
                     continue;
                 }else if(myDir == parent){
+                        string s=string(cur_directory);
+                int posoflastslash=0;
+                for(int i=0;i<s.length();i++){
+                    if(s[i]=='/'){
+                        posoflastslash=i;
+                    }
+                }
 
+                string parent=s.substr(0,posoflastslash);
+                
+                back_stack.push(cur_directory);
+                forw_stack.push(parent);
+                strcpy(cur_directory,parent.c_str());
+                directory_Listing(cur_directory);
                 }else{
                     //get the full path 
                   string fullP=string(cur_directory)+"/"+myDir;
@@ -257,12 +271,19 @@ void enableRawMode(){
 
                     pid_t pid = fork();
                     if (pid == 0) {
-                        close(2);
+                        // close(2);
                         // char *const pat=fpath;
                          // execv("vi",fpath);
-                        execlp("xdg-open", "xdg-open", fpath, NULL);
-                        exit(0);
+                        char* arguments[3] = { "vi", fpath, NULL };
+                        execvp("vi", arguments);
+                        
+                        
+                        
+                    }else{
+                        int *c;
+                        wait(c);
                     }
+                    // wait( 2 );
                           
                 }
 
