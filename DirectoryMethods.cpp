@@ -467,8 +467,8 @@ int main(int argc, char* argv[])
     if (g_argc == 1)
     {
         string str = ".";
-
-        strcpy(root, str.c_str());  
+        
+        strcpy(root,get_current_dir_name());  
          strcat(cur_directory, root);
         strcpy(homepath,root);
         back_stack.push(root);
