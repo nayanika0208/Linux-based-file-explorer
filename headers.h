@@ -97,4 +97,5 @@ void DeleteSingleFile(string path);
  void createDirectory(vector<string> cmdList);
 void renameFiles(vector<string> list);
 
+void movecommand(vector<string> list);
 void enableRawMode();

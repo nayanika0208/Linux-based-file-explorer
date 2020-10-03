@@ -32,9 +32,61 @@ char homepath[4096];
     
 }
 
-//**********************************************************************
-// It removes multiple files that passed by User in argument
-//**********************************************************************
+
+void movecommand(vector<string> list)
+{
+    unsigned int len = list.size();
+    if(len < 3)
+    {
+       perror("");
+    }
+    else{
+
+        for(unsigned int i=1;i<len-1;i++)
+        {           
+            string newData = create_absolute_path( list[i] );
+             string s=newData;
+              int posoflastslash=0;
+            for(int i=0;i<s.length();i++){
+                   if(s[i]=='/'){
+                    posoflastslash=i;
+                            }
+                        }
+                        string name;
+
+            
+             name=s.substr(posoflastslash+1,s.length());
+             
+                        
+           
+
+            string destpath= create_absolute_path( list[len-1]);
+            destpath =destpath + "/" + name;
+           
+            
+            if(isDirectory(newData))
+            {
+                if (mkdir(destpath.c_str(), 0755) == -1) {
+                    perror("");
+                    return;
+                }
+                else
+                {
+                    CopySingleDirectory(newData,destpath);
+                     DeleteSingleDir(newData);
+                }
+                
+               
+            }
+            else
+            {
+                copySingleFile(newData,destpath);
+                DeleteSingleFile(newData);
+            }
+        }
+    }
+}
+
 void removeFiles(vector<string> list)
 {   
     if(list.size()<2)
@@ -513,7 +565,10 @@ int commandMode(){
                     clearLastLine();
                 }
                 else if (s == "move"){
-                     cout<<"my_move()"<<endl;
+                     movecommand(my_command);
+                      posy=2;
+                    command_string.clear();
+                    clearLastLine();
 
                  }
                 else if (s == "rename"){
