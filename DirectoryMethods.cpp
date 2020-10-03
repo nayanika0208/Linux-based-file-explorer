@@ -22,10 +22,10 @@ char homepath[4096];
  
 
 int FilesToPrint()
-{ 
+{
     int lenRecord;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &terminalWindow);
-    term_row_num= terminalWindow.ws_row - 1;
+    term_row_num= terminalWindow.ws_row - 2;
     term_col_num=terminalWindow.ws_col;
     if (totalFiles <= term_row_num)
     {
@@ -57,7 +57,226 @@ bool isRegularFile(const char*path){
      return ((Stat.st_mode & S_IFMT) == S_IFREG)?true:false;
 }
 
-   
+
+
+   //************************************************************************* command mode******************
+//*******************************************************************************************************
+//********************************************************************************************
+
+   //*******************************************************************************************
+//*******************************************************************************************************
+//**
+
+void split_chat_to_string()
+{
+
+    string temp = "";
+    unsigned int i = 0;
+    unsigned int siz=command_string.size();
+    cout << endl;
+
+    for (; i < siz ; i++) {
+        //spliting the
+        if (command_string[i] == ' ' || command_string[i] == '\n' ) {
+
+            if(temp.size() > 0) {
+                //push in command string 
+                my_command.push_back(temp);
+            }
+
+            temp = "";
+        }
+        else if (command_string[i] == '\\'){
+            temp =  temp+ command_string[++i];
+        }
+        else{
+            temp = temp + command_string[i];
+        }
+    }
+    
+}
+string SplitFilename(string str)
+{
+    size_t found;
+    found = str.find_last_of("/\\");
+    return str.substr(0, found);
+}
+
+/*============================================================
+take relative path and convert to absolute path for internal
+system calls.
+=============================================================*/
+
+
+string create_absolute_path( string str)
+{
+    string abs="";
+    char firstchar = str[0];
+    
+    string basepath = string(root);
+    if(firstchar =='/')
+    {
+        abs = basepath + str;
+    }
+    else if(firstchar=='~')
+    {
+        abs = basepath + str.substr(1,str.length());
+    }
+    else if(firstchar=='.')
+    {
+        abs = string(cur_directory) + str.substr(1,str.length());    
+    }
+    else
+    {
+        abs= string(cur_directory)+ "/" + str;
+    }
+
+    return abs;
+}
+
+void clearCommand()
+{
+    unsigned int lastLine = term_row_num -1;
+    printf("%c[%d;%dH",27,lastLine,1);
+    printf("%c[2K", 27);
+    cout<<":";
+}
+
+int commandMode(){
+
+    // goto_flag = false;
+    //     search_flag_c = false;
+        posx = terminalWindow.ws_row-1;
+        posy = 1;
+        MOVE_CURSER;
+        printf("\x1b[0K");
+        printf(":");
+        fflush(0);
+        posy++;
+        char ch[3] = { 0 };
+        command_string.clear();
+        my_command.clear();
+        while (1) {
+            if (read(STDIN_FILENO, ch, 3) == 0)
+                continue;
+            if (ch[0] == 27 && ch[1] == 0 && ch[2] == 0) {
+                posx = 1;
+                posy = 1;
+                MOVE_CURSER;
+                return 0;
+            }
+            else if (ch[0] == 27 && ch[1] == '[' && (ch[2] == 'A' || ch[2] == 'B')) {
+                continue;
+            }
+            else if (ch[0] == 27 && ch[1] == '[' && (ch[2] == 'C' || ch[2] == 'D')) {
+                continue;
+            }
+            else if (ch[0] == 10) {
+                command_string.push_back('\n');
+
+                split_chat_to_string();
+
+               string s = my_command[0];
+                if (s == "copy"){
+
+
+                    cout<<"my_copy()"<<endl;
+                    clearCommand();
+                }
+                else if (s == "move"){
+                     cout<<"my_move()"<<endl;
+
+                 }
+                else if (s == "rename"){
+
+                    cout<<"my_rename();"<<endl;
+                    clearCommand();
+                }
+                else if (s == "create_file"){
+                   
+                      cout<<"create_file();;"<<endl;
+                      clearCommand();
+                }
+                else if (s == "create_dir"){
+                    cout<<"create_dir();"<<endl;
+                    clearCommand();
+                }
+                else if (s == "delete_file"){
+                    cout<<"delete_file();"<<endl;
+                    clearCommand();
+                }
+                else if (s == "delete_dir"){
+                    cout<<"delete_dir();"<<endl;
+                    clearCommand();
+                }
+                else if (s == "goto"){
+
+          
+                    string my_path ="";
+
+                    if(my_command.size() != 2){
+                         cout<<"Invalid Argument in Goto";;
+                     }else{
+                        my_path = create_absolute_path(my_command[1]);
+
+                     }
+
+
+                    back_stack.push(string(cur_directory));
+                    while(!forw_stack.empty()){
+                        forw_stack.pop();
+                    }
+                    strcpy(cur_directory, my_path.c_str());
+                    
+                    clearCommand();
+                    return 1;
+                }
+                else if (s == "search"){
+                   cout<<" my_search();;"<<endl;
+                   clearCommand();
+                }
+                else if (s == "snapshot"){
+                    cout<<"snapshot();;"<<endl;
+                    clearCommand();
+                }
+                else {
+                    
+                    cout << "command not found." << endl;
+                    clearCommand();
+                }
+                // if (goto_flag)
+                //     return 1;
+                // if (search_flag_c)
+                //     return 2;
+                // break;
+            }
+            else if (ch[0] == 127) {
+                if (posy > 2) {
+                    posy--;
+                    MOVE_CURSER;
+                    printf("\x1b[0K");
+                    command_string.pop_back();
+                }
+            }
+            else {
+                cout << ch[0];
+                posy++;
+                MOVE_CURSER;
+                command_string.push_back(ch[0]);
+            }
+            fflush(0);
+            memset(ch, 0, 3 * sizeof(ch[0]));
+        }
+    
+    return 0;
+}
+ 
+
+
+   //************************************************************************* enabling raw mode*******************
+
+//*******************************************************************************************************
+//********************************************************************************************
 
 void enableRawMode(){
     //getting the initial terminal settings
@@ -79,7 +298,7 @@ void enableRawMode(){
         posx=1;
         posy=80;
         while (true) {
-            unsigned int lastPos = terminalWindow.ws_row+1;
+            unsigned int lastPos = terminalWindow.ws_row-1;
             printf("%c[%d;%dH", 27, lastPos ,1);
             cout << "-----NORMAL MODE-----";
             
@@ -234,20 +453,23 @@ void enableRawMode(){
                 if(myDir == current){
                     continue;
                 }else if(myDir == parent){
-                        string s=string(cur_directory);
-                int posoflastslash=0;
-                for(int i=0;i<s.length();i++){
-                    if(s[i]=='/'){
-                        posoflastslash=i;
-                    }
-                }
+                    if(!(cur_directory == homepath)){
 
-                string parent=s.substr(0,posoflastslash);
-                
-                back_stack.push(cur_directory);
-                forw_stack.push(parent);
-                strcpy(cur_directory,parent.c_str());
+                        string s=string(cur_directory);
+                        int posoflastslash=0;
+                        for(int i=0;i<s.length();i++){
+                            if(s[i]=='/'){
+                                posoflastslash=i;
+                            }
+                        }
+
+                        string parent=s.substr(0,posoflastslash);
+                        
+                        back_stack.push(cur_directory);
+                        forw_stack.push(parent);
+                        strcpy(cur_directory,parent.c_str());
                 directory_Listing(cur_directory);
+                    }                        
                 }else{
                     //get the full path 
                   string fullP=string(cur_directory)+"/"+myDir;
@@ -266,8 +488,8 @@ void enableRawMode(){
                      directory_Listing(cur_directory);
                     
                 }else if(isRegularFile(fpath)){
-                    printf("%c[%d;%dH", 27, lastPos ,1);
-                    cout<<"file";
+                    
+                    
 
                     pid_t pid = fork();
                     if (pid == 0) {
@@ -291,15 +513,31 @@ void enableRawMode(){
                 
             }
             else if (inputKey[0] == ':') {
-                // int ret = command_mode();
-                // posy = 1;
-                // CURSER;
-                // if (ret == 2) {
-                //     search_flag = true;
-                //     continue;
-                // }
-                // else
-                //     listdir(cur_dir);
+               
+                printf("%c[%d;%dH", 27, lastPos ,1);
+                printf("%c[2K", 27);
+                cout << ":";
+                // cout<<"going into command mode :"<<endl;
+                int result = commandMode();
+                posx = 1;
+
+                printf("%c[%d;%dH", 27, posx, posy);
+                if (result == 1)
+                {
+                    directory_Listing(cur_directory);
+                    //cout<<"goto out : ";
+                }
+                else if (result == 2)
+                {
+                    //cout<<"search out : ";
+                }
+                else
+                {
+                    //cout<<"Normal out : ";
+                    //searchflag=0;
+                    //openDirecoty(curPath);
+                }
+                
             }
             else if (inputKey[0] == 'q') {
                 write(STDOUT_FILENO, "\x1b[2J", 4);
@@ -326,6 +564,7 @@ int directory_Listing(const char* path){
 
     if(pwDir == NULL){
         perror("opendir");
+
         return -1;
     }
    

@@ -38,7 +38,7 @@ extern unsigned int term_col_num; //number of col in terminal.
 extern int cur_window; //helper variable in scrolling.
 extern struct winsize terminal; //to get terminal window config.
 extern struct termios raw, newraw; //to get terminal configuration.
-extern vector<string> my_command; //store command tockens in command mode.
+extern vector<string> my_command; //store command tokens in command mode.
 extern ofstream fout; //for storing snapshot, to open file.
 
 
