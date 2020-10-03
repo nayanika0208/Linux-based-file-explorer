@@ -20,6 +20,92 @@ char homepath[4096];
  vector<string> my_command; //store command tockens in command mode.
  ofstream fout; //for storing snapshot, to open file.
  
+ 
+ void DeleteSingleFile(string path)
+{
+    //cout<<"path for deleting file : "<<path<<endl;
+    int status= remove(path.c_str());
+     if(status != 0)
+     {
+        perror("");
+     }
+    
+}
+
+//**********************************************************************
+// It removes multiple files that passed by User in argument
+//**********************************************************************
+void removeFiles(vector<string> list)
+{   
+    if(list.size()<2)
+    {
+          perror("");
+    }
+    for(unsigned int i=1;i<list.size();i++)
+    {
+          string fileToDelete = create_absolute_path(list[i]);
+         DeleteSingleFile(fileToDelete);
+    }    
+}
+ void DeleteSingleDir(string dirToDel)
+{
+    struct dirent* d;
+    DIR* folder;
+    folder = opendir(dirToDel.c_str());
+   
+    if (folder == NULL) {
+        perror("opendir");
+        return;
+    }
+    
+    string curr=".";
+    string parent="..";
+
+    while ((d = readdir(folder))) {
+          string dname=string(d->d_name);
+           string dirToDel_path = dirToDel + "/" + dname;
+           
+        if(dname == curr || dname == parent )
+            continue;
+        else {
+           
+            if (isDirectory(dirToDel_path)) {
+                
+                    //recursive call to creating directory
+                    DeleteSingleDir(dirToDel_path);
+                
+            }
+            else {
+                DeleteSingleFile(dirToDel_path);
+            }
+        }
+    }
+    closedir(folder);
+    remove(dirToDel.c_str());
+   
+ 
+ 
+}
+
+//**********************************************************************
+// It removes multiple directory that passed by User in argument
+//**********************************************************************
+void removeDirectories(vector<string> cmdList)
+{
+    if(cmdList.size() < 2)
+    {
+        cout<<endl;
+        cout<<"\033[0;31m"<<" Too Few Arguments "<<endl;
+        cout<<"\033[0m";
+        cout<<":";  
+    }
+    for(unsigned int i=1;i<cmdList.size();i++)
+    {
+        
+         
+         DeleteSingleDir(create_absolute_path( cmdList[i]));
+    }    
+}
 
 int FilesToPrint()
 {
@@ -39,11 +125,11 @@ int FilesToPrint()
 }
 
 //checking if the path denotes a directory or not
-bool isDirectory(const char*path){
+bool isDirectory(string path){
    
 
     struct stat Stat;
-     stat(path, &Stat);
+     stat(path.c_str(), &Stat);
 
      return ((Stat.st_mode & S_IFMT) == S_IFDIR)?true:false;
 }
@@ -146,6 +232,141 @@ void clearLastLine()
     cout<<":";
 }
 
+/*============================================================
+simple copy sunction which takes two paths.
+managed to keep owners and permission intact.
+=============================================================*/
+void copySingleFile(string fromFile, string toFile)
+{
+
+    char ch;
+    FILE *fromFile_f, *toFile_f;
+    
+    fromFile_f = fopen(fromFile.c_str(), "r");
+    toFile_f = fopen(toFile.c_str(), "w");
+    if (fromFile_f == NULL) {
+        perror("");
+        return;
+    }
+    if (toFile_f == NULL) {
+        perror("");
+        return;
+    }
+    while ((ch = getc(fromFile_f)) != EOF) {
+        
+        putc(ch, toFile_f);
+    }
+
+
+    struct stat fromFile_stat;
+    stat(fromFile.c_str(), &fromFile_stat);
+    chown(toFile.c_str(), fromFile_stat.st_uid, fromFile_stat.st_gid);
+    chmod(toFile.c_str(), fromFile_stat.st_mode);
+    fclose(fromFile_f);
+    fclose(toFile_f);
+ 
+}
+
+void CopySingleDirectory(string from, string to)
+{
+    struct dirent* d;
+    DIR* folder;
+    folder = opendir(from.c_str());
+   
+    if (folder == NULL) {
+        perror("opendir");
+        return;
+    }
+    
+    string curr=".";
+    string parent="..";
+
+    while ((d = readdir(folder))) {
+          string dname=string(d->d_name);
+           string from_path = from + "/" + dname;
+            string to_path = to + "/" + dname;
+        if(dname == curr || dname == parent )
+            continue;
+        else {
+           
+            if (isDirectory(from_path)) {
+                if (mkdir(to_path.c_str(), 0755) == -1) {
+                    perror("");
+                    return;
+                }
+                else
+                {
+                    //recursive call to creating directory
+                    CopySingleDirectory(from_path, to_path);
+                }
+            }
+            else {
+                copySingleFile(from_path, to_path);
+            }
+        }
+    }
+    closedir(folder);
+    return;
+}
+
+
+
+bool my_copy(vector<string> cmdList)
+{
+    if (cmdList.size() < 3)
+        {
+                    cout<<"\033[0;31m"<<" To Few arguments in the command given "<<endl;
+                     cout<<"\033[0m";
+                     cout<<":";
+                     return false;
+        }
+    else {
+        unsigned int siz=cmdList.size();
+        string destination = create_absolute_path(cmdList[ siz - 1]);
+        if (!isDirectory(destination)) {
+                  
+            return false;
+        }
+        for (unsigned int i = 1; i < siz - 1; i++) {
+            string from_path = create_absolute_path(cmdList[i]);
+            int posoflastslash=0;
+                for(int i=0;i<from_path.length();i++){
+                    if(from_path[i]=='/'){
+                        posoflastslash=i;
+                    }
+                }
+            // size_t found = from_path.find_last_of("/\\");
+            string to_path = destination + "/" + from_path.substr(posoflastslash + 1, from_path.length() - posoflastslash);
+            if (isDirectory(from_path)) {
+                if (mkdir(to_path.c_str(), 0755) != 0) {
+                    perror("");
+                    return false;
+                }
+                CopySingleDirectory(from_path, to_path);
+            }
+            else {
+                copySingleFile(from_path, to_path);
+            }
+        }
+    }
+    return true;
+}
+
+void renameFiles(vector<string> list)
+{
+    if(list.size()!=3)
+    {
+        // showError("Invalid Argument in Renaming !!!");
+    }
+    else{
+        string initName = create_absolute_path(  list[1]);
+        string finalName = create_absolute_path(list[2]);
+        rename(initName.c_str(),finalName.c_str());
+    }
+    
+}
+
+
 void createFile(vector<string> cmdList)
 {
     unsigned int len=cmdList.size();
@@ -160,7 +381,7 @@ void createFile(vector<string> cmdList)
         string destDir= create_absolute_path(cmdList[len-1]);
         //cout<<"\ndestDir : "<<destDir<<endl;
          //verifies if destination is directory or not.
-        if (!isDirectory(destDir.c_str())) {
+        if (!isDirectory(destDir)) {
             cout << "In the command The destination is not valid directory " << endl;
             return;
         }
@@ -214,7 +435,7 @@ void createDirectory(vector<string> cmdList)
         string destDir= create_absolute_path(cmdList[len-1]);
         //cout<<"\ndestDir : "<<destDir<<endl;
          //verifies if destination is directory or not.
-        if (!isDirectory(destDir.c_str())) {
+        if (!isDirectory(destDir)) {
                             cout<<endl;
                             cout<<"\033[0;31m"<<"In the command The destination is not valid directory "<<destDir<<endl;
                             cout<<"\033[0m";
@@ -285,8 +506,10 @@ int commandMode(){
                 string s = my_command[0];
                 if (s == "copy"){
 
-
-                    cout<<"my_copy()"<<endl;
+                     my_copy(my_command);
+                    // cout<<"my_copy()"<<endl;
+                      posy=2;
+                    command_string.clear();
                     clearLastLine();
                 }
                 else if (s == "move"){
@@ -295,7 +518,9 @@ int commandMode(){
                  }
                 else if (s == "rename"){
 
-                    cout<<"my_rename();"<<endl;
+                    renameFiles(my_command);
+                     posy=2;
+                    command_string.clear();
                     clearLastLine();
                 }
                 else if (s == "create_file"){
@@ -316,11 +541,17 @@ int commandMode(){
                     clearLastLine();
                 }
                 else if (s == "delete_file"){
-                    cout<<"delete_file();"<<endl;
+                    removeFiles(my_command);
+                    posy=2;
+                    command_string.clear();
+
                     clearLastLine();
                 }
                 else if (s == "delete_dir"){
-                    cout<<"delete_dir();"<<endl;
+                    removeDirectories(my_command);
+                     posy=2;
+                    command_string.clear();
+
                     clearLastLine();
                 }
                 else if (s == "goto"){

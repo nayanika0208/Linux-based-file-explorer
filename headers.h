@@ -85,3 +85,16 @@ void reset_curser_top();
 void update_list();
 bool isDirectory(string);
 int isFileExist(string);
+
+void DeleteSingleFile(string path);
+ void removeFiles(vector<string> list);
+ void DeleteSingleDir(string dirToDel);
+ void removeDirectories(vector<string> cmdList);
+ void copySingleFile(string fromFile, string toFile);
+ void CopySingleDirectory(string from, string to);
+ bool my_copy(vector<string> cmdList);
+ void createFile(vector<string> cmdList);
+ void createDirectory(vector<string> cmdList);
+void renameFiles(vector<string> list);
+
+void enableRawMode();
