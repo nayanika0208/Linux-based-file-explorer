@@ -67,9 +67,11 @@ bool isRegularFile(const char*path){
 //*******************************************************************************************************
 //**
 
-void split_chat_to_string()
+void split_char_to_string()
 {
+    
 
+     my_command.clear();
     string temp = "";
     unsigned int i = 0;
     unsigned int siz=command_string.size();
@@ -87,7 +89,8 @@ void split_chat_to_string()
             temp = "";
         }
         else if (command_string[i] == '\\'){
-            temp =  temp+ command_string[++i];
+            i++;
+            temp =  temp+ command_string[i];
         }
         else{
             temp = temp + command_string[i];
@@ -114,17 +117,18 @@ string create_absolute_path( string str)
     char firstchar = str[0];
     
     string basepath = string(root);
-    if(firstchar =='/')
+    if(firstchar=='.')
     {
-        abs = basepath + str;
+        abs = string(cur_directory) + str.substr(1,str.length());    
     }
+    
     else if(firstchar=='~')
     {
         abs = basepath + str.substr(1,str.length());
     }
-    else if(firstchar=='.')
+    else if(firstchar =='/')
     {
-        abs = string(cur_directory) + str.substr(1,str.length());    
+        abs = basepath + str;
     }
     else
     {
@@ -134,12 +138,112 @@ string create_absolute_path( string str)
     return abs;
 }
 
-void clearCommand()
+void clearLastLine()
 {
-    unsigned int lastLine = term_row_num -1;
+    unsigned int lastLine = term_row_num +1;
     printf("%c[%d;%dH",27,lastLine,1);
     printf("%c[2K", 27);
     cout<<":";
+}
+
+void createFile(vector<string> cmdList)
+{
+    unsigned int len=cmdList.size();
+    if(len < 3)
+    {
+                           // cout<<endl;
+                            cout<<"\033[0;31m"<<" To Few arguments in the command given "<<endl;
+                            cout<<"\033[0m";
+                            cout<<":";
+    }
+    else{
+        string destDir= create_absolute_path(cmdList[len-1]);
+        //cout<<"\ndestDir : "<<destDir<<endl;
+         //verifies if destination is directory or not.
+        if (!isDirectory(destDir.c_str())) {
+            cout << "In the command The destination is not valid directory " << endl;
+            return;
+        }
+        
+        for (unsigned int i = 1; i < cmdList.size() - 1; i++) {
+          
+             string filePath= destDir + "/"+cmdList[i];
+             
+             int status=open(filePath.c_str(),O_RDONLY | O_CREAT,S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH );   
+            if (status == -1)
+            {
+                            cout<<endl;
+                            cout<<"\033[0;31m"<<" Error creating file "<<endl;
+                            cout<<"\033[0m";
+                            cout<<":";          
+            }
+            
+            
+                                // ofstream ftsrc;
+                    
+                                // ftsrc.open(filePath);
+                                // if(!ftsrc)
+                                // {
+                                //     cout<<"Error in creating  file..!";
+                                
+                                    
+                                // }
+          
+
+        }
+
+    }
+    return;
+    
+}
+
+void createDirectory(vector<string> cmdList)
+{
+    
+    unsigned int len=cmdList.size();
+    if(len <= 2)
+    {
+                           // cout<<endl;
+                           //  cout<<"\033[0;31m"<<" To Few arguments in the command given "<<endl;
+                           //  cout<<"\033[0m";
+                           //  cout<<":";
+         printf("too few arguments:\n");
+         return;
+    }
+    else{
+        string destDir= create_absolute_path(cmdList[len-1]);
+        //cout<<"\ndestDir : "<<destDir<<endl;
+         //verifies if destination is directory or not.
+        if (!isDirectory(destDir.c_str())) {
+                            cout<<endl;
+                            cout<<"\033[0;31m"<<"In the command The destination is not valid directory "<<destDir<<endl;
+                            cout<<"\033[0m";
+                            cout<<":";
+           
+            return;
+        }
+        for (unsigned int i = 1; i < len -1; i++) {
+          
+             string Dir= destDir + "/"+cmdList[i];
+             // string dir = destpath + "/" + list[i];
+             // char *path = new char[dir.length() + 1];
+             // strcpy(path, dir.c_str());
+            if (mkdir(Dir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1)
+                 {      
+                             cout<<endl;
+                            cout<<"\033[0;31m"<<" Error in Creating Directory in path "<<destDir<<endl;
+                            cout<<"\033[0m";
+                            cout<<":";
+                   
+                }
+          
+
+        }
+
+    }
+    return ;
+    
+
 }
 
 int commandMode(){
@@ -157,11 +261,13 @@ int commandMode(){
         command_string.clear();
         my_command.clear();
         while (1) {
+            
+        
             if (read(STDIN_FILENO, ch, 3) == 0)
                 continue;
             if (ch[0] == 27 && ch[1] == 0 && ch[2] == 0) {
                 posx = 1;
-                posy = 1;
+                posy = 80;
                 MOVE_CURSER;
                 return 0;
             }
@@ -174,14 +280,14 @@ int commandMode(){
             else if (ch[0] == 10) {
                 command_string.push_back('\n');
 
-                split_chat_to_string();
-
-               string s = my_command[0];
+                split_char_to_string();
+               if(my_command.size() >=1){
+                string s = my_command[0];
                 if (s == "copy"){
 
 
                     cout<<"my_copy()"<<endl;
-                    clearCommand();
+                    clearLastLine();
                 }
                 else if (s == "move"){
                      cout<<"my_move()"<<endl;
@@ -190,24 +296,32 @@ int commandMode(){
                 else if (s == "rename"){
 
                     cout<<"my_rename();"<<endl;
-                    clearCommand();
+                    clearLastLine();
                 }
                 else if (s == "create_file"){
                    
-                      cout<<"create_file();;"<<endl;
-                      clearCommand();
+                     createFile(my_command);
+                      posy=2;
+                    command_string.clear();
+
+                    clearLastLine();
                 }
                 else if (s == "create_dir"){
-                    cout<<"create_dir();"<<endl;
-                    clearCommand();
+                    // cout<< "my command .size   "<<my_command.size()<<endl;
+
+                    createDirectory(my_command);
+                    posy=2;
+                    command_string.clear();
+
+                    clearLastLine();
                 }
                 else if (s == "delete_file"){
                     cout<<"delete_file();"<<endl;
-                    clearCommand();
+                    clearLastLine();
                 }
                 else if (s == "delete_dir"){
                     cout<<"delete_dir();"<<endl;
-                    clearCommand();
+                    clearLastLine();
                 }
                 else if (s == "goto"){
 
@@ -215,7 +329,10 @@ int commandMode(){
                     string my_path ="";
 
                     if(my_command.size() != 2){
-                         cout<<"Invalid Argument in Goto";;
+                            cout<<endl;
+                            cout<<"\033[0;31m"<<" Invalid command "<<endl;
+                            cout<<"\033[0m";
+                            cout<<":";
                      }else{
                         my_path = create_absolute_path(my_command[1]);
 
@@ -228,27 +345,34 @@ int commandMode(){
                     }
                     strcpy(cur_directory, my_path.c_str());
                     
-                    clearCommand();
+                    clearLastLine();
                     return 1;
                 }
                 else if (s == "search"){
                    cout<<" my_search();;"<<endl;
-                   clearCommand();
+                   clearLastLine();
                 }
                 else if (s == "snapshot"){
                     cout<<"snapshot();;"<<endl;
-                    clearCommand();
+                    clearLastLine();
                 }
                 else {
                     
-                    cout << "command not found." << endl;
-                    clearCommand();
+                            cout<<endl;
+                            cout<<"\033[0;31m"<<" Command not found  " <<endl;
+                            cout<<"\033[0m";
+                            cout<<":";
+                            clearLastLine();
                 }
                 // if (goto_flag)
                 //     return 1;
                 // if (search_flag_c)
                 //     return 2;
                 // break;
+            }else{
+                clearLastLine(); 
+            }
+               
             }
             else if (ch[0] == 127) {
                 if (posy > 2) {
@@ -535,7 +659,7 @@ void enableRawMode(){
                 {
                     //cout<<"Normal out : ";
                     //searchflag=0;
-                    //openDirecoty(curPath);
+                   directory_Listing(cur_directory);
                 }
                 
             }
@@ -613,34 +737,38 @@ void update_list()
 }
 
 void display(const char* dirName){
-   
-    struct stat thestat;
-    //will be used to determine the file owner & group
+    
+     struct stat thestat;
+
+  //will be used to determine the file owner & group
     struct passwd *tf; 
     struct group *gf;
+    string finalpath;
+    string dir=string(cur_directory) ;
+    string cur=string(dirName);
+    finalpath = dir+ "/" + cur ;
+
+    char *path = new char[finalpath.length() + 1];
+    strcpy(path, finalpath.c_str());
+    
+   
+    if (stat(path, &thestat) == -1)
+    {
+        perror("lstat");
+    }
+   
+    
    
     //Creating a placeholder for the string. 
     //We create this so later it can be properly adressed.
     //It's reasonnable here to consider a 512 maximum lenght, as we're just going to use it to display a path to a file, 
     //but we could have used a strlen/malloc combo and declared a simple buf[] at this moment
     
-    stat(dirName, &thestat);
+    
 
 
-        switch (thestat.st_mode & S_IFMT) {
-            case S_IFBLK:  cout<<"b"; break;
-            case S_IFCHR:  cout<<"c"; break; 
-            case S_IFDIR:  cout<<"d"; break; //It's a (sub)directory 
-            case S_IFIFO:  cout<<"p";break; //fifo
-            case S_IFLNK:  cout<<"l"; break; //Sym link
-            case S_IFSOCK: cout<<"s"; break;
-            //Filetype isn't identified
-            default:      cout<<"-"; break;
-                }
-        //[permissions]
-        //Same for the permissions, we have to test the different rights
-        //READ http://linux.die.net/man/2/chmod 
        
+            printf((S_ISDIR(thestat.st_mode)) ? "d" : "-");
             cout<<( (thestat.st_mode & S_IRUSR) ? "r" : "-");
             cout<<( (thestat.st_mode & S_IWUSR) ? "w" : "-");
             cout<<( (thestat.st_mode & S_IXUSR) ? "x" : "-");
