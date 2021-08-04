@@ -1,12 +1,12 @@
-## Linux File Explorer-
+## Linux Based File Explorer
 
 
-### About the project-
+### About the project
 Building a fully functional file explorer application, albeit with restricted features.
 The application supports two modes:
 * NORMAL MODE
 * COMMAND MODE
-### Normal Mode-
+### Normal Mode
 * Displays list of directories and files present in current folder.
 * Informations displayed: file name, file size, ownership, last modified (in human readable format)
 * Key presses and their functionalities:
@@ -17,7 +17,7 @@ The application supports two modes:
     * `HOME KEY`: Takes user back to root directory
     * `UP and DOWN keys`: used for moving cursor up and down to desired file or directory
 
-### Command Mode-
+### Command Mode
 This mode is entered from Normal mode whenever `:` is pressed.
 ##### Following commands are supported:
 * COPY: `copy <file_name(s)> <target_directory_path>`
